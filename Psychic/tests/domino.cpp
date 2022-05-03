@@ -308,26 +308,27 @@ public:
 			b10 = m_world->CreateBody(&bd);
 			fd.friction = 10.f;
 
-			shape.SetTwoSided(b2Vec2(-35.f, -17.95f), b2Vec2(-20.f, -20.0f));
+			shape.SetTwoSided(b2Vec2(-32.5f, -19.5f), b2Vec2(-20.f, -20.f));
 			fd.shape = &shape;
 			b10->CreateFixture(&fd);
-			//shape.SetTwoSided(b2Vec2(-24.5f, -19.0f), b2Vec2(-24.5f, -20.0f));
+			shape.SetTwoSided(b2Vec2(-32.5f, -17.f), b2Vec2(-32.5f, -19.5f));
 			//fd.shape = &shape;
-			//b10->CreateFixture(&fd);
+			b10->CreateFixture(&fd);
 		}
 
+		/*
 		//弹簧上的平台
 		b2Body* b11;
 		{
 			b2PolygonShape shape;
-			shape.SetAsBox(1.0f, 0.1f);
+			shape.SetAsBox(1.25f, 0.1f);
 			b2FixtureDef fd;
 			fd.shape = &shape;
-			fd.density = 20.f;
+			fd.density = 10.f;
 
 			b2BodyDef bd;
 			bd.type = b2_dynamicBody;
-			bd.position.Set(-20.f, -15.f);
+			bd.position.Set(-19.f, -15.f);
 			bd.fixedRotation = true;
 
 			b11 = m_world->CreateBody(&bd);
@@ -335,14 +336,15 @@ public:
 
 			b2DistanceJointDef jd;
 			jd.Initialize(b1, b11, b2Vec2(0.0, 15.0f), bd.position);
-			jd.localAnchorA.Set(-20.f, -5.f);
+			jd.localAnchorA.Set(-19.f, -5.f);
 			jd.collideConnected = true;
 			jd.minLength = 0.f;
 			jd.maxLength = 10.f;
 			jd.length = 8.f;
-			b2LinearStiffness(jd.stiffness, jd.damping, 0.5f, 0.05f, jd.bodyA, jd.bodyB);
+			b2LinearStiffness(jd.stiffness, jd.damping, 0.75f, 0.1f, jd.bodyA, jd.bodyB);
 			m_world->CreateJoint(&jd);
 		}
+		*/
 
 		//平台
 		b2Body* b12;

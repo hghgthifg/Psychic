@@ -57,15 +57,26 @@ static void CreateUI(GLFWwindow* window, const char* glslVersion = NULL)
 		assert(false);
 	}
 
-	const char* fontPath = "resource/droid_sans.ttf";
-	FILE* file = fopen(fontPath, "rb");
-	if (file)
+	const char* fontPath1 = "resource/droid_sans.ttf";
+	const char* fontPath2 = "../resource/droid_sans.ttf";
+	const char* fontPath = nullptr;
+	FILE* file1 = fopen(fontPath1, "rb");
+	FILE* file2 = fopen(fontPath2, "rb");
+	if (file1)
+	{
+		fontPath = fontPath1;
+		fclose(file1);
+	}
+
+	if (file2)
+	{
+		fontPath = fontPath2;
+		fclose(file2);
+	}
+
+	if (fontPath)
 	{
 		ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath, 13.0f);
-	}
-	else
-	{
-		fprintf(stderr, "Can't find file droid_sans.ttf");
 	}
 }
 
