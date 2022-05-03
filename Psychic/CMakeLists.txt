@@ -1,14 +1,16 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 
 set (PSYCHIC_SOURCE_FILES
-	"psychic.cpp"
+	"Psychic.cpp"
     "imgui_impl_glfw.cpp"
     "imgui_impl_opengl3.cpp"
     "draw.cpp"
     "test.cpp"
     "settings.cpp"
-    
-    "tests/crash.cpp" "tests/domino.cpp" "tests/move.cpp")
+    "tests/crash.cpp"
+    "tests/domino.cpp"
+    "tests/move.cpp"
+)
 set (PSYCHIC_HEAD_FILES
     "imgui_impl_glfw.h"
     "imgui_impl_opengl3.h"

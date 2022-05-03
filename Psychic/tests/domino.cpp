@@ -308,7 +308,7 @@ public:
 			b10 = m_world->CreateBody(&bd);
 			fd.friction = 10.f;
 
-			shape.SetTwoSided(b2Vec2(-35.f, -17.96f), b2Vec2(-20.f, -20.0f));
+			shape.SetTwoSided(b2Vec2(-35.f, -17.95f), b2Vec2(-20.f, -20.0f));
 			fd.shape = &shape;
 			b10->CreateFixture(&fd);
 			//shape.SetTwoSided(b2Vec2(-24.5f, -19.0f), b2Vec2(-24.5f, -20.0f));
