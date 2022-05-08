@@ -1,4 +1,6 @@
-﻿#include <imgui/imgui.h>
+﻿#define _CRT_SECURE_NO_WARNINGS
+
+#include <imgui/imgui.h>
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -140,7 +142,6 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
 	{
 		s_test->KeyboardUp(key);
 	}
-	// else GLFW_REPEAT
 }
 
 static void CharCallback(GLFWwindow* window, unsigned int c)
