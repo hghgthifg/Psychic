@@ -9,37 +9,177 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "draw.h"
-#include "test.h"
+//#include "test.h"
 #include "settings.h"
+#include "scene.h"
 
 GLFWwindow* g_mainWindow = nullptr;
+
+/*
+//tag
 static int32 s_testSelection = 0;
 static Test* s_test = nullptr;
+//tag
+*/
+
+static Scene* s_scene = nullptr;
+
 static Settings s_settings;
 static bool s_rightMouseDown = false;
 static b2Vec2 s_clickPointWS = b2Vec2_zero;
 
+//回调
+#pragma region
 void glfwErrorCallback(int error, const char* description)
 {
 	fprintf(stderr, "GLFW error occured. Code: %d. Description: %s\n", error, description);
 }
 
-static inline bool CompareTests(const TestEntry& a, const TestEntry& b)
+static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	int result = strcmp(a.category, b.category);
-	if (result == 0)
+	ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+	if (ImGui::GetIO().WantCaptureKeyboard)
 	{
-		result = strcmp(a.name, b.name);
+		return;
 	}
 
-	return result < 0;
+	if (action == GLFW_PRESS)
+	{
+		switch (key)
+		{
+		case GLFW_KEY_ESCAPE:
+			// Quit
+			glfwSetWindowShouldClose(g_mainWindow, GL_TRUE);
+			break;
+
+		case GLFW_KEY_R:
+			// Reset test
+
+			/*tag
+			delete s_test;
+			s_test = g_testEntries[s_settings.m_testIndex].createFcn();
+			tag*/
+
+			delete s_scene;
+			s_scene = new Scene();
+
+			break;
+
+		case GLFW_KEY_O:
+			s_settings.m_singleStep = true;
+			break;
+
+		case GLFW_KEY_P:
+			s_settings.m_pause = !s_settings.m_pause;
+			break;
+
+		case GLFW_KEY_TAB:
+			g_debugDraw.m_showUI = !g_debugDraw.m_showUI;
+
+		default:
+			if (s_scene)
+			{
+				s_scene->Keyboard(key);
+			}
+		}
+	}
+	else if (action == GLFW_RELEASE)
+	{
+		s_scene->KeyboardUp(key);
+	}
 }
 
-static void SortTests()
+static void CharCallback(GLFWwindow* window, unsigned int c)
 {
-	std::sort(g_testEntries, g_testEntries + g_testCount, CompareTests);
+	ImGui_ImplGlfw_CharCallback(window, c);
 }
 
+static void MouseButtonCallback(GLFWwindow* window, int32 button, int32 action, int32 mods)
+{
+	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+
+	double xd, yd;
+	glfwGetCursorPos(g_mainWindow, &xd, &yd);
+	b2Vec2 ps((float)xd, (float)yd);
+
+	// Use the mouse to move things around.
+	if (button == GLFW_MOUSE_BUTTON_1)
+	{
+		b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+		if (action == GLFW_PRESS)
+		{
+			if (mods == GLFW_MOD_SHIFT)
+			{
+				s_scene->ShiftMouseDown(pw);
+			}
+			else
+			{
+				s_scene->MouseDown(pw);
+			}
+		}
+
+		if (action == GLFW_RELEASE)
+		{
+			s_scene->MouseUp(pw);
+		}
+	}
+	else if (button == GLFW_MOUSE_BUTTON_2)
+	{
+		if (action == GLFW_PRESS)
+		{
+			s_clickPointWS = g_camera.ConvertScreenToWorld(ps);
+			s_rightMouseDown = true;
+		}
+
+		if (action == GLFW_RELEASE)
+		{
+			s_rightMouseDown = false;
+		}
+	}
+}
+
+static void MouseMotionCallback(GLFWwindow*, double xd, double yd)
+{
+	b2Vec2 ps((float)xd, (float)yd);
+
+	b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+	s_scene->MouseMove(pw);
+
+	if (s_rightMouseDown)
+	{
+		b2Vec2 diff = pw - s_clickPointWS;
+		g_camera.m_center.x -= diff.x;
+		g_camera.m_center.y -= diff.y;
+		s_clickPointWS = g_camera.ConvertScreenToWorld(ps);
+	}
+}
+
+static void ScrollCallback(GLFWwindow* window, double dx, double dy)
+{
+	ImGui_ImplGlfw_ScrollCallback(window, dx, dy);
+	if (ImGui::GetIO().WantCaptureMouse)
+	{
+		return;
+	}
+
+	if (dy > 0)
+	{
+		g_camera.m_zoom /= 1.1f;
+	}
+	else
+	{
+		g_camera.m_zoom *= 1.1f;
+	}
+}
+
+static void ResizeWindowCallback(GLFWwindow*, int width, int height)
+{
+	g_camera.m_width = width;
+	g_camera.m_height = height;
+}
+#pragma endregion
+
+//ImGui初始化
 static void CreateUI(GLFWwindow* window, const char* glslVersion = NULL)
 {
 	IMGUI_CHECKVERSION();
@@ -82,157 +222,10 @@ static void CreateUI(GLFWwindow* window, const char* glslVersion = NULL)
 	}
 }
 
-static void ResizeWindowCallback(GLFWwindow*, int width, int height)
-{
-	g_camera.m_width = width;
-	g_camera.m_height = height;
-}
-
-static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
-	if (ImGui::GetIO().WantCaptureKeyboard)
-	{
-		return;
-	}
-
-	if (action == GLFW_PRESS)
-	{
-		switch (key)
-		{
-		case GLFW_KEY_ESCAPE:
-			// Quit
-			glfwSetWindowShouldClose(g_mainWindow, GL_TRUE);
-			break;
-
-		case GLFW_KEY_R:
-			// Reset test
-			delete s_test;
-			s_test = g_testEntries[s_settings.m_testIndex].createFcn();
-			break;
-
-		case GLFW_KEY_O:
-			s_settings.m_singleStep = true;
-			break;
-
-		case GLFW_KEY_P:
-			s_settings.m_pause = !s_settings.m_pause;
-			break;
-
-		case GLFW_KEY_LEFT_BRACKET:
-			// Switch to previous test
-			--s_testSelection;
-			if (s_testSelection < 0)
-			{
-				s_testSelection = g_testCount - 1;
-			}
-			break;
-
-		case GLFW_KEY_TAB:
-			g_debugDraw.m_showUI = !g_debugDraw.m_showUI;
-
-		default:
-			if (s_test)
-			{
-				s_test->Keyboard(key);
-			}
-		}
-	}
-	else if (action == GLFW_RELEASE)
-	{
-		s_test->KeyboardUp(key);
-	}
-}
-
-static void CharCallback(GLFWwindow* window, unsigned int c)
-{
-	ImGui_ImplGlfw_CharCallback(window, c);
-}
-
-static void MouseButtonCallback(GLFWwindow* window, int32 button, int32 action, int32 mods)
-{
-	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
-
-	double xd, yd;
-	glfwGetCursorPos(g_mainWindow, &xd, &yd);
-	b2Vec2 ps((float)xd, (float)yd);
-
-	// Use the mouse to move things around.
-	if (button == GLFW_MOUSE_BUTTON_1)
-	{
-		//<##>
-		//ps.Set(0, 0);
-		b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
-		if (action == GLFW_PRESS)
-		{
-			if (mods == GLFW_MOD_SHIFT)
-			{
-				s_test->ShiftMouseDown(pw);
-			}
-			else
-			{
-				s_test->MouseDown(pw);
-			}
-		}
-
-		if (action == GLFW_RELEASE)
-		{
-			s_test->MouseUp(pw);
-		}
-	}
-	else if (button == GLFW_MOUSE_BUTTON_2)
-	{
-		if (action == GLFW_PRESS)
-		{
-			s_clickPointWS = g_camera.ConvertScreenToWorld(ps);
-			s_rightMouseDown = true;
-		}
-
-		if (action == GLFW_RELEASE)
-		{
-			s_rightMouseDown = false;
-		}
-	}
-}
-
-static void MouseMotionCallback(GLFWwindow*, double xd, double yd)
-{
-	b2Vec2 ps((float)xd, (float)yd);
-
-	b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
-	s_test->MouseMove(pw);
-
-	if (s_rightMouseDown)
-	{
-		b2Vec2 diff = pw - s_clickPointWS;
-		g_camera.m_center.x -= diff.x;
-		g_camera.m_center.y -= diff.y;
-		s_clickPointWS = g_camera.ConvertScreenToWorld(ps);
-	}
-}
-
-static void ScrollCallback(GLFWwindow* window, double dx, double dy)
-{
-	ImGui_ImplGlfw_ScrollCallback(window, dx, dy);
-	if (ImGui::GetIO().WantCaptureMouse)
-	{
-		return;
-	}
-
-	if (dy > 0)
-	{
-		g_camera.m_zoom /= 1.1f;
-	}
-	else
-	{
-		g_camera.m_zoom *= 1.1f;
-	}
-}
-
 static void RestartTest()
 {
-	delete s_test;
-	s_test = g_testEntries[s_settings.m_testIndex].createFcn();
+	delete s_scene;
+	s_scene = new Scene();
 }
 
 static void UpdateUI()
@@ -268,11 +261,15 @@ static void UpdateUI()
 				ImGui::EndTabItem();
 			}
 
+
+			/*
 			ImGuiTreeNodeFlags leafNodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
 			leafNodeFlags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
 			ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+			*/
 
+			/*
 			if (ImGui::BeginTabItem("Tests"))
 			{
 				int categoryIndex = 0;
@@ -321,12 +318,14 @@ static void UpdateUI()
 				}
 				ImGui::EndTabItem();
 			}
+			*/
 			ImGui::EndTabBar();
+			
 		}
 
 		ImGui::End();
 
-		s_test->UpdateUI();
+		s_scene->UpdateUI();
 	}
 }
 
@@ -334,8 +333,9 @@ static void UpdateUI()
 int main(int, char**)
 {
 	s_settings.Load();
-	SortTests();
 
+	//OpenGl初始化
+	#pragma region
 	glfwSetErrorCallback(glfwErrorCallback);
 
 	g_camera.m_width = 1600;
@@ -386,12 +386,12 @@ int main(int, char**)
 	glfwSetScrollCallback(g_mainWindow, ScrollCallback);
 
 	g_debugDraw.Create();
+	#pragma endregion
 
 	CreateUI(g_mainWindow, glslVersion);
 
-	s_settings.m_testIndex = b2Clamp(s_settings.m_testIndex, 0, g_testCount - 1);
-	s_testSelection = s_settings.m_testIndex;
-	s_test = g_testEntries[s_settings.m_testIndex].createFcn();
+	//s_settings.m_testIndex = b2Clamp(s_settings.m_testIndex, 0, g_testCount - 1);
+	s_scene = new Scene();
 
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
@@ -423,12 +423,10 @@ int main(int, char**)
 			ImGui::Begin("Overlay", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar);
 			ImGui::End();
 
-			const TestEntry& entry = g_testEntries[s_settings.m_testIndex];
-			sprintf(buffer, "%s : %s", entry.category, entry.name);
-			s_test->DrawTitle(buffer);
+			s_scene->DrawTitle("Psychic");
 		}
 
-		s_test->Step(s_settings);
+		s_scene->Step(s_settings);
 
 		UpdateUI();
 
@@ -450,14 +448,16 @@ int main(int, char**)
 
 		glfwSwapBuffers(g_mainWindow);
 
+		/*
 		if (s_testSelection != s_settings.m_testIndex)
 		{
 			s_settings.m_testIndex = s_testSelection;
-			delete s_test;
-			s_test = g_testEntries[s_settings.m_testIndex].createFcn();
+			delete s_scene;
+			s_scene = new Scene();
 			g_camera.m_zoom = 1.0f;
 			g_camera.m_center.Set(0.0f, 20.0f);
 		}
+		*/
 
 		glfwPollEvents();
 
@@ -476,8 +476,8 @@ int main(int, char**)
 		sleepAdjust = 0.9 * sleepAdjust + 0.1 * (target - frameTime);
 	}
 
-	delete s_test;
-	s_test = nullptr;
+	delete s_scene;
+	s_scene = nullptr;
 
 	g_debugDraw.Destroy();
 	ImGui_ImplOpenGL3_Shutdown();
@@ -486,4 +486,3 @@ int main(int, char**)
 
 	return 0;
 }
-
