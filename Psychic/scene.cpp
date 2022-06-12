@@ -169,3 +169,34 @@ void Scene::Step(Settings& settings)
 		++m_stepCount;
 	}
 }
+
+void Scene::AddEdge(b2Vec2 a, b2Vec2 b)
+{
+	b2BodyDef bd;
+	b2Body* edge = m_world->CreateBody(&bd);
+
+	b2EdgeShape shape;
+	shape.SetTwoSided(a, b);
+
+	b2FixtureDef fd;
+	fd.shape = &shape;
+	edge->CreateFixture(&fd);
+}
+
+void Scene::AddCircle(b2Vec2 pos,float radius,b2BodyType type)
+{
+	b2CircleShape shape;
+	shape.m_radius = radius;
+
+	b2FixtureDef fd;
+	fd.shape = &shape;
+	fd.density = 1.0f;
+
+	b2BodyDef bd;
+	bd.type = type;
+	bd.position.Set(pos);
+	
+	b2Body* body = m_world->CreateBody(&bd);
+	body->CreateFixture(&fd);
+
+}

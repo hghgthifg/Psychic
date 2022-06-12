@@ -75,6 +75,12 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
 
 		case GLFW_KEY_TAB:
 			g_debugDraw.m_showUI = !g_debugDraw.m_showUI;
+			break;
+
+		case GLFW_KEY_C:
+			s_scene->AddEdge(b2Vec2(40.f, 40.f), b2Vec2(0.f, 0.f));
+			s_scene->AddCircle(b2Vec2(20.f, 30.f), 1, b2_dynamicBody);
+			break;
 
 		default:
 			if (s_scene)
@@ -253,7 +259,7 @@ static void UpdateUI()
 					RestartTest();
 				}
 
-				if (ImGui::Button("Quit", button_sz))
+				if (ImGui::Button("Quit (Esc)", button_sz))
 				{
 					glfwSetWindowShouldClose(g_mainWindow, GL_TRUE);
 				}
@@ -447,17 +453,6 @@ int main(int, char**)
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(g_mainWindow);
-
-		/*
-		if (s_testSelection != s_settings.m_testIndex)
-		{
-			s_settings.m_testIndex = s_testSelection;
-			delete s_scene;
-			s_scene = new Scene();
-			g_camera.m_zoom = 1.0f;
-			g_camera.m_center.Set(0.0f, 20.0f);
-		}
-		*/
 
 		glfwPollEvents();
 

@@ -75,6 +75,8 @@ protected:
 	friend class ContactListener;
 };
 
+
+
 class Scene
 {
 public:
@@ -91,6 +93,9 @@ public:
 	virtual void MouseUp(const b2Vec2& p);
 	virtual void MouseMove(const b2Vec2& p);
 	void ShiftOrigin(const b2Vec2& newOrigin);
+
+	void AddCircle(b2Vec2 pos, float radius, b2BodyType type);
+	void AddEdge(b2Vec2 a, b2Vec2 b);
 protected:
 	ContactListener m_contactListener;
 	DestructionListener m_destructionListener;

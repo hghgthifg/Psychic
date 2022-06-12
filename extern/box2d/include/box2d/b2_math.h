@@ -51,6 +51,7 @@ struct B2_API b2Vec2
 
 	/// Set this vector to some specified coordinates.
 	void Set(float x_, float y_) { x = x_; y = y_; }
+	void Set(b2Vec2 pos) { x = pos.x; y = pos.y; }
 
 	/// Negate this vector.
 	b2Vec2 operator -() const { b2Vec2 v; v.Set(-x, -y); return v; }
