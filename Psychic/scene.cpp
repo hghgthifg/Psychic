@@ -1,6 +1,8 @@
 #include "scene.h"
 #include "settings.h"
 
+#include <iostream>
+
 Scene::Scene()
 {
 	b2Vec2 gravity;
@@ -98,7 +100,7 @@ void Scene::MouseDown(const b2Vec2& p)
 		float frequencyHz = 5.0f;
 		float dampingRatio = 0.7f;
 
-		m_objectSeleted = (ObjectData*)(callback.m_fixture->GetUserData().pointer);
+		m_objectSeleted = (ObjectData*)(callback.m_fixture->GetBody()->GetUserData().pointer);
 		//std::cout << m_objectSeleted << std::endl;
 
 		b2Body* body = callback.m_fixture->GetBody();
@@ -169,6 +171,19 @@ void Scene::Step(Settings& settings)
 
 	m_world->Step(timeStep, settings.m_velocityIterations, settings.m_positionIterations);
 
+	//std::cout << m_world->GetBodyCount() << std::endl;;
+	for (b2Body* i = m_world->GetBodyList(); i != NULL; i = i->GetNext())
+	{
+		if (i->GetType() == b2_dynamicBody)
+		{
+			int m = i->GetMass();
+			ObjectData* od = (ObjectData*)i->GetUserData().pointer;
+			std::cout << m << " " << (ObjectData*)i->GetUserData().pointer << " " << (__int64)(i) << std::endl;
+			od->x = i->GetPosition().x;
+			od->y = i->GetPosition().y;
+		}
+	}
+
 	m_world->DebugDraw();
 	g_debugDraw.Flush();
 
@@ -180,9 +195,6 @@ void Scene::Step(Settings& settings)
 
 void Scene::AddEdge(b2Vec2 a, b2Vec2 b)
 {
-	b2BodyDef bd;
-	b2Body* edge = m_world->CreateBody(&bd);
-
 	b2EdgeShape shape;
 	shape.SetTwoSided(a, b);
 
@@ -191,11 +203,11 @@ void Scene::AddEdge(b2Vec2 a, b2Vec2 b)
 
 	b2FixtureDef fd;
 	fd.shape = &shape;
-	fd.userData.pointer = reinterpret_cast<uintptr_t>(od);
 
-	//std::cout << (int)od << std::endl;
-	//std::cout << fd.userData.pointer << std::endl;
+	b2BodyDef bd;
+	bd.userData.pointer = reinterpret_cast<uintptr_t>(od);
 
+	b2Body* edge = m_world->CreateBody(&bd);
 	edge->CreateFixture(&fd);
 
 	od->id = m_objectId;
@@ -204,7 +216,6 @@ void Scene::AddEdge(b2Vec2 a, b2Vec2 b)
 	od->name = "Object" + std::to_string(m_objectId);
 	od->x = (a.x + b.x) / 2.0f;
 	od->y = (a.y + b.y) / 2.0f;
-
 	m_objectId++;
 }
 
@@ -219,11 +230,11 @@ void Scene::AddCircle(b2Vec2 pos, float radius, b2BodyType type)
 	b2FixtureDef fd;
 	fd.shape = &shape;
 	fd.density = 1.0f;
-	fd.userData.pointer = reinterpret_cast<uintptr_t>(od);
 
 	b2BodyDef bd;
 	bd.type = type;
 	bd.position.Set(pos);
+	bd.userData.pointer = reinterpret_cast<uintptr_t>(od);
 
 	b2Body* body = m_world->CreateBody(&bd);
 	body->CreateFixture(&fd);
