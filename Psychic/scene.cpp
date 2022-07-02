@@ -9,7 +9,8 @@ Scene::Scene()
 	m_textLine = 30;
 	m_textIncrement = 13;
 	m_mouseJoint = NULL;
-	m_pointCount = 0;
+	m_objectId = 1;
+	m_objectSeleted = NULL;
 
 	m_destructionListener.ContactListener = &this->m_contactListener;
 	m_world->SetDestructionListener(&m_destructionListener);
@@ -25,6 +26,11 @@ Scene::Scene()
 Scene::~Scene()
 {
 	delete m_world;
+	for (auto &i : m_objectDataList)
+	{
+		delete i;
+		i = NULL;
+	}
 	m_world = NULL;
 }
 
@@ -51,6 +57,7 @@ public:
 	bool ReportFixture(b2Fixture* fixture) override
 	{
 		b2Body* body = fixture->GetBody();
+
 		if (body->GetType() == b2_dynamicBody)
 		{
 			bool inside = fixture->TestPoint(m_point);
@@ -90,6 +97,9 @@ void Scene::MouseDown(const b2Vec2& p)
 	{
 		float frequencyHz = 5.0f;
 		float dampingRatio = 0.7f;
+
+		m_objectSeleted = (ObjectData*)(callback.m_fixture->GetUserData().pointer);
+		//std::cout << m_objectSeleted << std::endl;
 
 		b2Body* body = callback.m_fixture->GetBody();
 		b2MouseJointDef jd;
@@ -157,8 +167,6 @@ void Scene::Step(Settings& settings)
 	m_world->SetContinuousPhysics(settings.m_enableContinuous);
 	m_world->SetSubStepping(settings.m_enableSubStepping);
 
-	m_pointCount = 0;
-
 	m_world->Step(timeStep, settings.m_velocityIterations, settings.m_positionIterations);
 
 	m_world->DebugDraw();
@@ -178,25 +186,68 @@ void Scene::AddEdge(b2Vec2 a, b2Vec2 b)
 	b2EdgeShape shape;
 	shape.SetTwoSided(a, b);
 
+	ObjectData* od = new ObjectData();
+	m_objectDataList.push_back(od);
+
 	b2FixtureDef fd;
 	fd.shape = &shape;
+	fd.userData.pointer = reinterpret_cast<uintptr_t>(od);
+
+	//std::cout << (int)od << std::endl;
+	//std::cout << fd.userData.pointer << std::endl;
+
 	edge->CreateFixture(&fd);
+
+	od->id = m_objectId;
+	od->mass = 0;
+	od->density = 0;
+	od->name = "Object" + std::to_string(m_objectId);
+	od->x = (a.x + b.x) / 2.0f;
+	od->y = (a.y + b.y) / 2.0f;
+
+	m_objectId++;
 }
 
-void Scene::AddCircle(b2Vec2 pos,float radius,b2BodyType type)
+void Scene::AddCircle(b2Vec2 pos, float radius, b2BodyType type)
 {
 	b2CircleShape shape;
 	shape.m_radius = radius;
 
+	ObjectData* od = new ObjectData();
+	m_objectDataList.push_back(od);
+
 	b2FixtureDef fd;
 	fd.shape = &shape;
 	fd.density = 1.0f;
+	fd.userData.pointer = reinterpret_cast<uintptr_t>(od);
 
 	b2BodyDef bd;
 	bd.type = type;
 	bd.position.Set(pos);
-	
+
 	b2Body* body = m_world->CreateBody(&bd);
 	body->CreateFixture(&fd);
 
+	od->id = m_objectId;
+	od->mass = body->GetMass();
+	od->density = fd.density;
+	od->name = "Object" + std::to_string(m_objectId);
+	od->x = pos.x;
+	od->y = pos.y;
+	m_objectId++;
+}
+
+void Scene::UpdateUI()
+{
+	if (m_objectSeleted != NULL)
+	{
+		ImGui::SetNextWindowPos(ImVec2(0, 20));
+		//ImGui::SetNextWindowSize(ImVec2((float)200, (float)g_camera.m_height - 40));
+		ImGui::Begin("Attribute", (bool*)1);
+		ImGui::Text("name : %s" , m_objectSeleted->name.c_str());
+		ImGui::Text("mass : %f", m_objectSeleted->mass);
+		ImGui::Text("density : %f", m_objectSeleted->density);
+		ImGui::Text("position : (%f,%f)", m_objectSeleted->x, m_objectSeleted->y);
+		ImGui::End();
+	}
 }

@@ -9,21 +9,12 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "draw.h"
-//#include "test.h"
 #include "settings.h"
 #include "scene.h"
 
 GLFWwindow* g_mainWindow = nullptr;
 
-/*
-//tag
-static int32 s_testSelection = 0;
-static Test* s_test = nullptr;
-//tag
-*/
-
 static Scene* s_scene = nullptr;
-
 static Settings s_settings;
 static bool s_rightMouseDown = false;
 static b2Vec2 s_clickPointWS = b2Vec2_zero;
@@ -53,21 +44,15 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			break;
 
 		case GLFW_KEY_R:
-			// Reset test
-
-			/*tag
-			delete s_test;
-			s_test = g_testEntries[s_settings.m_testIndex].createFcn();
-			tag*/
-
 			delete s_scene;
 			s_scene = new Scene();
-
 			break;
 
+		/*
 		case GLFW_KEY_O:
 			s_settings.m_singleStep = true;
 			break;
+		*/
 
 		case GLFW_KEY_P:
 			s_settings.m_pause = !s_settings.m_pause;
@@ -266,69 +251,9 @@ static void UpdateUI()
 
 				ImGui::EndTabItem();
 			}
-
-
-			/*
-			ImGuiTreeNodeFlags leafNodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-			leafNodeFlags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-
-			ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-			*/
-
-			/*
-			if (ImGui::BeginTabItem("Tests"))
-			{
-				int categoryIndex = 0;
-				const char* category = g_testEntries[categoryIndex].category;
-				int i = 0;
-				while (i < g_testCount)
-				{
-					bool categorySelected = strcmp(category, g_testEntries[s_settings.m_testIndex].category) == 0;
-					ImGuiTreeNodeFlags nodeSelectionFlags = categorySelected ? ImGuiTreeNodeFlags_Selected : 0;
-					bool nodeOpen = ImGui::TreeNodeEx(category, nodeFlags | nodeSelectionFlags);
-
-					if (nodeOpen)
-					{
-						while (i < g_testCount && strcmp(category, g_testEntries[i].category) == 0)
-						{
-							ImGuiTreeNodeFlags selectionFlags = 0;
-							if (s_settings.m_testIndex == i)
-							{
-								selectionFlags = ImGuiTreeNodeFlags_Selected;
-							}
-							ImGui::TreeNodeEx((void*)(intptr_t)i, leafNodeFlags | selectionFlags, "%s", g_testEntries[i].name);
-							if (ImGui::IsItemClicked())
-							{
-								delete s_test;
-								s_settings.m_testIndex = i;
-								s_test = g_testEntries[i].createFcn();
-								s_testSelection = i;
-							}
-							++i;
-						}
-						ImGui::TreePop();
-					}
-					else
-					{
-						while (i < g_testCount && strcmp(category, g_testEntries[i].category) == 0)
-						{
-							++i;
-						}
-					}
-
-					if (i < g_testCount)
-					{
-						category = g_testEntries[i].category;
-						categoryIndex = i;
-					}
-				}
-				ImGui::EndTabItem();
-			}
-			*/
 			ImGui::EndTabBar();
 			
 		}
-
 		ImGui::End();
 
 		s_scene->UpdateUI();
