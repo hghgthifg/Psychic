@@ -12,7 +12,8 @@ set (PSYCHIC_HEAD_FILES
     "imgui_impl_opengl3.h"
     "draw.h"
     "settings.h"
-    "scene.h")
+    "scene.h"
+    "stb_image.h")
 
 add_executable (Psychic ${PSYCHIC_SOURCE_FILES} ${PSYCHIC_HEAD_FILES})
 

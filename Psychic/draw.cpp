@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <imgui/imgui.h>
 
+#include "stb_image.h"
+
 #define BUFFER_OFFSET(x) ((const void*) (x))
 
 DebugDraw g_debugDraw;

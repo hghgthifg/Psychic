@@ -145,7 +145,7 @@ void Scene::MouseMove(const b2Vec2& p)
 		m_mouseJoint->SetTarget(p);
 	}
 }
-
+ 
 void Scene::Step(Settings& settings)
 {
 	float timeStep = settings.m_hertz > 0.0f ? 1.0f / settings.m_hertz : float(0.0f);
@@ -178,7 +178,7 @@ void Scene::Step(Settings& settings)
 		{
 			int m = i->GetMass();
 			ObjectData* od = (ObjectData*)i->GetUserData().pointer;
-			std::cout << m << " " << (ObjectData*)i->GetUserData().pointer << " " << (__int64)(i) << std::endl;
+			//std::cout << m << " " << (ObjectData*)i->GetUserData().pointer << " " << (__int64)(i) << std::endl;
 			od->x = i->GetPosition().x;
 			od->y = i->GetPosition().y;
 		}
@@ -254,7 +254,7 @@ void Scene::UpdateUI()
 	{
 		ImGui::SetNextWindowPos(ImVec2(0, 20));
 		//ImGui::SetNextWindowSize(ImVec2((float)200, (float)g_camera.m_height - 40));
-		ImGui::Begin("Attribute", (bool*)1);
+		ImGui::Begin("Attribute");
 		ImGui::Text("name : %s" , m_objectSeleted->name.c_str());
 		ImGui::Text("mass : %f", m_objectSeleted->mass);
 		ImGui::Text("density : %f", m_objectSeleted->density);
