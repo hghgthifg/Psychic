@@ -5,6 +5,7 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include <map>
 #include <imgui/imgui.h>
 
 #include "imgui_impl_glfw.h"
@@ -16,10 +17,17 @@
 
 GLFWwindow* g_mainWindow = nullptr;
 
+enum class OperateModel
+{
+	MOVING,
+	EDITING
+};
 static Scene* s_scene = nullptr;
 static Settings s_settings;
 static bool s_rightMouseDown = false;
 static b2Vec2 s_clickPointWS = b2Vec2_zero;
+static OperateModel s_operateModel = OperateModel::MOVING;
+static std::map<const char*, GLuint> s_imageTexture;
 
 static bool sLoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height)
 {
@@ -57,6 +65,8 @@ static bool sLoadTextureFromFile(const char* filename, GLuint* out_texture, int*
 
 static ImTextureID sInitTextureForImgui(const char* filename)
 {
+	if (s_imageTexture[filename])
+		return (void*)(intptr_t)s_imageTexture[filename];
 	int image_width = 0;
 	int image_height = 0;
 	GLuint image_texture = 0;
@@ -92,6 +102,7 @@ static ImTextureID sInitTextureForImgui(const char* filename)
 	free(path1);
 	free(path2);
 
+	s_imageTexture[filename] = image_texture;
 	return (void*)(intptr_t)image_texture;
 }
 
@@ -114,23 +125,23 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
 	{
 		switch (key)
 		{
-		/*
-		case GLFW_KEY_ESCAPE:
-			// Quit
-			glfwSetWindowShouldClose(g_mainWindow, GL_TRUE);
-			break;
-		*/
+			/*
+			case GLFW_KEY_ESCAPE:
+				// Quit
+				glfwSetWindowShouldClose(g_mainWindow, GL_TRUE);
+				break;
+			*/
 
 		case GLFW_KEY_R:
 			delete s_scene;
 			s_scene = new Scene();
 			break;
 
-		/*
-		case GLFW_KEY_O:
-			s_settings.m_singleStep = true;
-			break;
-		*/
+			/*
+			case GLFW_KEY_O:
+				s_settings.m_singleStep = true;
+				break;
+			*/
 
 		case GLFW_KEY_P:
 			s_settings.m_pause = !s_settings.m_pause;
@@ -174,22 +185,25 @@ static void MouseButtonCallback(GLFWwindow* window, int32 button, int32 action, 
 	// Use the mouse to move things around.
 	if (button == GLFW_MOUSE_BUTTON_1)
 	{
-		b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
-		if (action == GLFW_PRESS)
+		if (s_operateModel == OperateModel::MOVING)
 		{
-			if (mods == GLFW_MOD_SHIFT)
+			b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+			if (action == GLFW_PRESS)
 			{
-				s_scene->ShiftMouseDown(pw);
+				if (mods == GLFW_MOD_SHIFT)
+				{
+					s_scene->ShiftMouseDown(pw);
+				}
+				else
+				{
+					s_scene->MouseDown(pw);
+				}
 			}
-			else
-			{
-				s_scene->MouseDown(pw);
-			}
-		}
 
-		if (action == GLFW_RELEASE)
-		{
-			s_scene->MouseUp(pw);
+			if (action == GLFW_RELEASE)
+			{
+				s_scene->MouseUp(pw);
+			}
 		}
 	}
 	else if (button == GLFW_MOUSE_BUTTON_2)
@@ -330,7 +344,7 @@ static void UpdateUI()
 				ImGui::EndTabItem();
 			}
 			ImGui::EndTabBar();
-			
+
 		}
 
 		ImGui::End();
@@ -343,12 +357,31 @@ static void UpdateUI()
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoCollapse |
-			ImGuiWindowFlags_NoInputs |
+			//ImGuiWindowFlags_NoInputs |
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoBackground);
 		ImGui::SetNextWindowPosCenter();
-		ImGui::ImageButton(sInitTextureForImgui("circle.png"), ImVec2(48, 48), ImVec2(0, 0), ImVec2(1, 1), 0, ImVec4(0.761719, 0.761719, 0.871094, 1), ImVec4(0.6, 0.7, 0.9, 1));
+		/*
+		if (ImGui::Button("Circle"))
+		{
+			std::cout << "Circle" << std::endl;
+		}
+		*/
+		
+		if (ImGui::ImageButton(
+			sInitTextureForImgui("circle.png"),
+			ImVec2(48, 48),
+			ImVec2(0, 0),
+			ImVec2(1, 1),
+			0,
+			ImVec4(0.761719, 0.761719, 0.871094, 1),
+			ImVec4(0.6, 0.7, 0.9, 1)))
+		{
+			s_settings.m_pause = true;
+			s_operateModel = OperateModel::EDITING;
+		}
+		
 		ImGui::End();
 
 		s_scene->UpdateUI();
@@ -361,7 +394,7 @@ int main(int, char**)
 	s_settings.Load();
 
 	//OpenGl初始化
-	#pragma region
+#pragma region
 	glfwSetErrorCallback(glfwErrorCallback);
 
 	g_camera.m_width = 1600;
@@ -412,7 +445,7 @@ int main(int, char**)
 	glfwSetScrollCallback(g_mainWindow, ScrollCallback);
 
 	g_debugDraw.Create();
-	#pragma endregion
+#pragma endregion
 
 	CreateUI(g_mainWindow, glslVersion);
 
@@ -466,7 +499,7 @@ int main(int, char**)
 			b2Vec2 ps((float)xx, (float)yy);
 			b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
 
-			g_debugDraw.DrawString(5, g_camera.m_height - 40, "mouse position : (%.5f,%.5f)", pw.x,pw.y);
+			g_debugDraw.DrawString(5, g_camera.m_height - 40, "mouse position : (%.5f,%.5f)", pw.x, pw.y);
 		}
 
 		ImGui::Render();
@@ -500,4 +533,4 @@ int main(int, char**)
 	glfwTerminate();
 
 	return 0;
-}
+	}
