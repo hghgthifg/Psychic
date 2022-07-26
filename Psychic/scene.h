@@ -1,10 +1,12 @@
 #ifndef SCENE_H
 #define SCENE_H
 
-#include <imgui/imgui.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string>
 #include <vector>
+
+#include <imgui/imgui.h>
 
 #include "box2d/box2d.h"
 #include "draw.h"
@@ -60,8 +62,8 @@ struct ContactPoint
 class ContactListener : public b2ContactListener
 {
 public:
-	ContactListener(){};
-	virtual ~ContactListener(){};
+	ContactListener() {};
+	virtual ~ContactListener() {};
 
 	// Let derived tests know that a joint was destroyed.
 	virtual void JointDestroyed(b2Joint* joint) { B2_NOT_USED(joint); }

@@ -2,9 +2,14 @@
 #define DRAW_H
 
 #define GLFW_INCLUDE_NONE
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <map>
 #include <GLFW/glfw3.h>
 #include <glad/gl.h>
 #include <box2d/box2d.h>
+#include <imgui/imgui.h>
 
 struct b2AABB;
 struct GLRenderPoints;
@@ -69,9 +74,18 @@ public:
 	GLRenderTriangles* m_triangles;
 };
 
+class RenderManager
+{
+public:
+	static bool sLoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height);
+	static ImTextureID sInitTextureForImgui(const char* filename);
+	//static ImTextureID sInitTextureForImgui(const char* filename);
+private:
+	static std::map<const char*, GLuint> s_imageTexture;
+};
+
 extern DebugDraw g_debugDraw;
 extern Camera g_camera;
 extern GLFWwindow* g_mainWindow;
 
 #endif
-

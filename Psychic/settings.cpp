@@ -1,8 +1,5 @@
 #include "settings.h"
 
-#include <sajson/sajson.h>
-#include <stdio.h>
-
 static const char* fileName = "settings.ini";
 
 static bool sReadFile(char*& data, int& size, const char* filename)

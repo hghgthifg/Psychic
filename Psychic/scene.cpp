@@ -28,7 +28,7 @@ Scene::Scene()
 Scene::~Scene()
 {
 	delete m_world;
-	for (auto &i : m_objectDataList)
+	for (auto& i : m_objectDataList)
 	{
 		delete i;
 		i = NULL;
@@ -145,7 +145,7 @@ void Scene::MouseMove(const b2Vec2& p)
 		m_mouseJoint->SetTarget(p);
 	}
 }
- 
+
 void Scene::Step(Settings& settings)
 {
 	float timeStep = settings.m_hertz > 0.0f ? 1.0f / settings.m_hertz : float(0.0f);
@@ -255,7 +255,7 @@ void Scene::UpdateUI()
 		ImGui::SetNextWindowPos(ImVec2(0, 20));
 		//ImGui::SetNextWindowSize(ImVec2((float)200, (float)g_camera.m_height - 40));
 		ImGui::Begin("Attribute");
-		ImGui::Text("name : %s" , m_objectSeleted->name.c_str());
+		ImGui::Text("name : %s", m_objectSeleted->name.c_str());
 		ImGui::Text("mass : %f", m_objectSeleted->mass);
 		ImGui::Text("density : %f", m_objectSeleted->density);
 		ImGui::Text("position : (%f,%f)", m_objectSeleted->x, m_objectSeleted->y);
