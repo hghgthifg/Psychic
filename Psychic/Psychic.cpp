@@ -1,4 +1,5 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
+#define DEBUG
 
 #include <iostream>
 #include <chrono>
@@ -25,6 +26,8 @@ static Settings s_settings;
 static bool s_rightMouseDown = false;
 static b2Vec2 s_clickPointWS = b2Vec2_zero;
 static OperateModel s_operateModel = OperateModel::MOVING;
+static int s_operateDirection = 0;
+static b2Body* s_bodySelected = nullptr;
 
 //回调
 #pragma region
@@ -56,12 +59,6 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			delete s_scene;
 			s_scene = new Scene();
 			break;
-
-			/*
-			case GLFW_KEY_O:
-				s_settings.m_singleStep = true;
-				break;
-			*/
 
 		case GLFW_KEY_P:
 			s_settings.m_pause = !s_settings.m_pause;
@@ -105,9 +102,11 @@ static void MouseButtonCallback(GLFWwindow* window, int32 button, int32 action, 
 	// Use the mouse to move things around.
 	if (button == GLFW_MOUSE_BUTTON_1)
 	{
-		if (s_operateModel == OperateModel::MOVING)
+		b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+		switch (s_operateModel)
 		{
-			b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+		case OperateModel::MOVING:
+		{
 			if (action == GLFW_PRESS)
 			{
 				if (mods == GLFW_MOD_SHIFT)
@@ -124,6 +123,37 @@ static void MouseButtonCallback(GLFWwindow* window, int32 button, int32 action, 
 			{
 				s_scene->MouseUp(pw);
 			}
+			break;
+		}
+		case OperateModel::EDITING:
+		{
+			if (action == GLFW_RELEASE)
+			{
+				s_operateDirection = 0;
+			}
+			else
+			{
+				double bx = s_bodySelected->GetPosition().x;
+				double by = s_bodySelected->GetPosition().y;
+				std::cout << "mouse position : (" << pw.x << ", " << pw.y << ")" << std::endl;
+				std::cout << "object position : (" << bx << ", " << by << ")" << std::endl;
+				if (pw.x > bx + 1.f && pw.x<bx + 5.f && pw.y>by - 1.f && pw.y < by + 1.f)
+				{
+					std::cout << "direction : x" << std::endl;
+					s_operateDirection = 1;
+					break;
+				}
+				if (pw.y > by + 1.f && pw.y<by + 5.f && pw.x>bx - 1.f && pw.x < bx + 1.f)
+				{
+					std::cout << "direction : y" << std::endl;
+					s_operateDirection = 2;
+					break;
+				}
+				break;
+			}
+		}
+		default:
+			break;
 		}
 	}
 	else if (button == GLFW_MOUSE_BUTTON_2)
@@ -147,6 +177,24 @@ static void MouseMotionCallback(GLFWwindow*, double xd, double yd)
 
 	b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
 	s_scene->MouseMove(pw);
+
+	switch (s_operateDirection)
+	{
+	case 1:
+	{
+		b2Transform tf = s_bodySelected->GetTransform();
+		s_bodySelected->SetTransform(b2Vec2(pw.x, tf.p.y), s_bodySelected->GetAngle());
+		break;
+	}
+	case 2:
+	{
+		b2Transform tf = s_bodySelected->GetTransform();
+		s_bodySelected->SetTransform(b2Vec2(tf.p.x, pw.y), s_bodySelected->GetAngle());
+		break;
+	}
+	default:
+		break;
+	}
 
 	if (s_rightMouseDown)
 	{
@@ -225,10 +273,13 @@ static void CreateUI(GLFWwindow* window, const char* glslVersion = NULL)
 	}
 }
 
-static void RestartTest()
+static void Restart()
 {
 	delete s_scene;
 	s_scene = new Scene();
+	s_operateModel = OperateModel::MOVING;
+	s_operateDirection = 0;
+	s_bodySelected = nullptr;
 }
 
 static void UpdateUI()
@@ -253,7 +304,7 @@ static void UpdateUI()
 
 				if (ImGui::Button("Restart (R)", button_sz))
 				{
-					RestartTest();
+					Restart();
 				}
 
 				if (ImGui::Button("Quit (Esc)", button_sz))
@@ -283,7 +334,7 @@ static void UpdateUI()
 			ImGuiWindowFlags_NoBackground);
 		ImGui::SetNextWindowPosCenter();
 		if (ImGui::ImageButton(
-			RenderManager::sInitTextureForImgui("circle.png"),
+			g_debugDraw.CreateTextureForImgui("circle.png"),
 			ImVec2(48, 48),
 			ImVec2(0, 0),
 			ImVec2(1, 1),
@@ -291,12 +342,24 @@ static void UpdateUI()
 			ImVec4(0.761719, 0.761719, 0.871094, 1),
 			ImVec4(0.6, 0.7, 0.9, 1)))
 		{
-			s_settings.m_pause = true;
-			s_operateModel = OperateModel::EDITING;
+			if (s_operateModel != OperateModel::EDITING)
+			{
+				s_settings.m_pause = true;
+				s_operateModel = OperateModel::EDITING;
+				s_operateDirection = 0;
 
-			std::cout << "Circle" << std::endl;
+				std::cout << "Circle" << std::endl;
 
-			s_scene->AddCircle(g_camera.ConvertScreenToWorld(b2Vec2(g_camera.m_width / 2.0f, g_camera.m_height / 2.0f)), 1, b2_dynamicBody);
+				s_scene->AddCircle(g_camera.ConvertScreenToWorld(b2Vec2(g_camera.m_width / 2.0f, g_camera.m_height / 2.0f)), 1, b2_dynamicBody);
+				s_bodySelected = s_scene->GetLastBody();
+			}
+		}
+
+		if (s_operateModel == OperateModel::EDITING)
+		{
+			g_debugDraw.DrawArrow(s_bodySelected->GetPosition(), s_bodySelected->GetPosition() + b2Vec2(5, 0), b2Color(1, 0, 0, 1));
+			g_debugDraw.DrawArrow(s_bodySelected->GetPosition(), s_bodySelected->GetPosition() + b2Vec2(0, 5), b2Color(0, 1, 0, 1));
+			g_debugDraw.Flush();
 		}
 
 		ImGui::End();
@@ -304,7 +367,6 @@ static void UpdateUI()
 		s_scene->UpdateUI();
 	}
 }
-
 
 int main(int, char**)
 {
@@ -361,19 +423,21 @@ int main(int, char**)
 	glfwSetCursorPosCallback(g_mainWindow, MouseMotionCallback);
 	glfwSetScrollCallback(g_mainWindow, ScrollCallback);
 
+	glfwSwapInterval(1);
+
 	g_debugDraw.Create();
-#pragma endregion
 
 	CreateUI(g_mainWindow, glslVersion);
 
-	//s_settings.m_testIndex = b2Clamp(s_settings.m_testIndex, 0, g_testCount - 1);
-	s_scene = new Scene();
-
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+#pragma endregion
+
+	s_scene = new Scene();
 
 	std::chrono::duration<double> frameTime(0.0);
 	std::chrono::duration<double> sleepAdjust(0.0);
 
+	//窗口循环
 	while (!glfwWindowShouldClose(g_mainWindow))
 	{
 		std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
@@ -406,6 +470,7 @@ int main(int, char**)
 
 		UpdateUI();
 
+#ifdef DEBUG
 		if (g_debugDraw.m_showUI)
 		{
 			sprintf(buffer, "%.1f fps", 1.0 / frameTime.count());
@@ -418,6 +483,7 @@ int main(int, char**)
 
 			g_debugDraw.DrawString(5, g_camera.m_height - 40, "mouse position : (%.5f,%.5f)", pw.x, pw.y);
 		}
+#endif // DEBUG
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -430,9 +496,11 @@ int main(int, char**)
 		std::chrono::duration<double> target(1.0 / 60.0);
 		std::chrono::duration<double> timeUsed = t2 - t1;
 		std::chrono::duration<double> sleepTime = target - timeUsed + sleepAdjust;
-		if (sleepTime > std::chrono::duration<double>(0))
+		while (sleepTime > std::chrono::duration<double>(0))
 		{
-			std::this_thread::sleep_for(sleepTime);
+			t2 = std::chrono::steady_clock::now();
+			timeUsed = t2 - t1;
+			sleepTime = target - timeUsed + sleepAdjust;
 		}
 
 		std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();

@@ -64,24 +64,23 @@ public:
 
 	void DrawString(const b2Vec2& p, const char* string, ...);
 
-	void DrawAABB(b2AABB* aabb, const b2Color& color);
+	void DrawAABB(const b2AABB* aabb, const b2Color& color);
+
+	void DrawArrow(const b2Vec2& from, const b2Vec2& to, const b2Color& color);
+
+	ImTextureID CreateTextureForImgui(const char* filename);
 
 	void Flush();
 
 	bool m_showUI;
+
+private:
+	bool LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height);
+
 	GLRenderPoints* m_points;
 	GLRenderLines* m_lines;
 	GLRenderTriangles* m_triangles;
-};
-
-class RenderManager
-{
-public:
-	static bool sLoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height);
-	static ImTextureID sInitTextureForImgui(const char* filename);
-	//static ImTextureID sInitTextureForImgui(const char* filename);
-private:
-	static std::map<const char*, GLuint> s_imageTexture;
+	std::map<const char*, GLuint> m_imageTexture;
 };
 
 extern DebugDraw g_debugDraw;

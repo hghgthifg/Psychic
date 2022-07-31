@@ -606,6 +606,83 @@ void DebugDraw::Destroy()
 	m_triangles = NULL;
 }
 
+bool DebugDraw::LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height)
+{
+	// Load from file
+	int image_width = 0;
+	int image_height = 0;
+	unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
+	if (image_data == NULL)
+		return false;
+
+	// Create a OpenGL texture identifier
+	GLuint image_texture;
+	glGenTextures(1, &image_texture);
+	glBindTexture(GL_TEXTURE_2D, image_texture);
+
+	// Setup filtering parameters for display
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
+
+	// Upload pixels into texture
+#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+#endif
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+	stbi_image_free(image_data);
+
+	*out_texture = image_texture;
+	*out_width = image_width;
+	*out_height = image_height;
+
+	return true;
+}
+
+ImTextureID DebugDraw::CreateTextureForImgui(const char* filename)
+{
+	if (m_imageTexture[filename])
+		return (void*)(intptr_t)m_imageTexture[filename];
+	int image_width = 0;
+	int image_height = 0;
+	GLuint image_texture = 0;
+
+	char* path1 = (char*)malloc(strlen("resource/") + strlen(filename) + 1);
+	assert(path1 != NULL);
+	strcpy(path1, "resource/");
+	strcat(path1, filename);
+	char* path2 = (char*)malloc(strlen("../resource/") + strlen(filename) + 1);
+	assert(path2 != NULL);
+	strcpy(path2, "../resource/");
+	strcat(path2, filename);
+
+	const char* path = nullptr;
+	FILE* file1 = fopen(path1, "rb");
+	FILE* file2 = fopen(path2, "rb");
+	if (file1)
+	{
+		path = path1;
+		fclose(file1);
+	}
+
+	if (file2)
+	{
+		path = path2;
+		fclose(file2);
+	}
+
+	assert(path != nullptr);
+	bool ret = LoadTextureFromFile(path, &image_texture, &image_width, &image_height);
+	IM_ASSERT(ret);
+
+	free(path1);
+	free(path2);
+
+	m_imageTexture[filename] = image_texture;
+	return (void*)(intptr_t)image_texture;
+}
+
 void DebugDraw::DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
 {
 	b2Vec2 p1 = vertices[vertexCount - 1];
@@ -761,7 +838,7 @@ void DebugDraw::DrawString(const b2Vec2& pw, const char* string, ...)
 	va_end(arg);
 }
 
-void DebugDraw::DrawAABB(b2AABB* aabb, const b2Color& c)
+void DebugDraw::DrawAABB(const b2AABB* aabb, const b2Color& c)
 {
 	b2Vec2 p1 = aabb->lowerBound;
 	b2Vec2 p2 = b2Vec2(aabb->upperBound.x, aabb->lowerBound.y);
@@ -781,88 +858,15 @@ void DebugDraw::DrawAABB(b2AABB* aabb, const b2Color& c)
 	m_lines->Vertex(p1, c);
 }
 
+void DebugDraw::DrawArrow(const b2Vec2& from, const b2Vec2& to, const b2Color& color)
+{
+	m_lines->Vertex(from,color);
+	m_lines->Vertex(to,color);
+}
+
 void DebugDraw::Flush()
 {
 	m_triangles->Flush();
 	m_lines->Flush();
 	m_points->Flush();
-}
-
-std::map<const char*, GLuint> RenderManager::s_imageTexture;
-
-bool RenderManager::sLoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height)
-{
-	// Load from file
-	int image_width = 0;
-	int image_height = 0;
-	unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
-	if (image_data == NULL)
-		return false;
-
-	// Create a OpenGL texture identifier
-	GLuint image_texture;
-	glGenTextures(1, &image_texture);
-	glBindTexture(GL_TEXTURE_2D, image_texture);
-
-	// Setup filtering parameters for display
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
-
-	// Upload pixels into texture
-#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-#endif
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-	stbi_image_free(image_data);
-
-	*out_texture = image_texture;
-	*out_width = image_width;
-	*out_height = image_height;
-
-	return true;
-}
-
-ImTextureID RenderManager::sInitTextureForImgui(const char* filename)
-{
-	if (RenderManager::s_imageTexture[filename])
-		return (void*)(intptr_t)RenderManager::s_imageTexture[filename];
-	int image_width = 0;
-	int image_height = 0;
-	GLuint image_texture = 0;
-
-	char* path1 = (char*)malloc(strlen("resource/") + strlen(filename) + 1);
-	assert(path1 != NULL);
-	strcpy(path1, "resource/");
-	strcat(path1, filename);
-	char* path2 = (char*)malloc(strlen("../resource/") + strlen(filename) + 1);
-	assert(path2 != NULL);
-	strcpy(path2, "../resource/");
-	strcat(path2, filename);
-
-	const char* path = nullptr;
-	FILE* file1 = fopen(path1, "rb");
-	FILE* file2 = fopen(path2, "rb");
-	if (file1)
-	{
-		path = path1;
-		fclose(file1);
-	}
-
-	if (file2)
-	{
-		path = path2;
-		fclose(file2);
-	}
-
-	assert(path != nullptr);
-	bool ret = RenderManager::sLoadTextureFromFile(path, &image_texture, &image_width, &image_height);
-	IM_ASSERT(ret);
-
-	free(path1);
-	free(path2);
-
-	RenderManager::s_imageTexture[filename] = image_texture;
-	return (void*)(intptr_t)image_texture;
 }

@@ -262,3 +262,8 @@ void Scene::UpdateUI()
 		ImGui::End();
 	}
 }
+
+b2Body* Scene::GetLastBody()
+{
+	return m_world->GetBodyList();
+}

@@ -110,6 +110,8 @@ public:
 	virtual void MouseMove(const b2Vec2& p);
 	void ShiftOrigin(const b2Vec2& newOrigin);
 
+	b2Body* GetLastBody();
+
 	void AddCircle(b2Vec2 pos, float radius, b2BodyType type);
 	void AddEdge(b2Vec2 a, b2Vec2 b);
 
