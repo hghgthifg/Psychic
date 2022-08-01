@@ -24,10 +24,12 @@ enum class OperateModel
 static Scene* s_scene = nullptr;
 static Settings s_settings;
 static bool s_rightMouseDown = false;
+static bool s_leftMouseDown = true;
 static b2Vec2 s_clickPointWS = b2Vec2_zero;
 static OperateModel s_operateModel = OperateModel::MOVING;
 static int s_operateDirection = 0;
 static b2Body* s_bodySelected = nullptr;
+static b2Vec2 s_objectOriginalPosition;
 
 //回调
 #pragma region
@@ -98,10 +100,21 @@ static void MouseButtonCallback(GLFWwindow* window, int32 button, int32 action, 
 	double xd, yd;
 	glfwGetCursorPos(g_mainWindow, &xd, &yd);
 	b2Vec2 ps((float)xd, (float)yd);
+	s_clickPointWS = g_camera.ConvertScreenToWorld(ps);
+	std::cout << s_clickPointWS.x << " " << s_clickPointWS.y << std::endl;
 
 	// Use the mouse to move things around.
 	if (button == GLFW_MOUSE_BUTTON_1)
 	{
+		if (action == GLFW_PRESS)
+		{
+			s_leftMouseDown = true;
+		}
+
+		if (action == GLFW_RELEASE)
+		{
+			s_leftMouseDown = false;
+		}
 		b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
 		switch (s_operateModel)
 		{
@@ -135,6 +148,8 @@ static void MouseButtonCallback(GLFWwindow* window, int32 button, int32 action, 
 			{
 				double bx = s_bodySelected->GetPosition().x;
 				double by = s_bodySelected->GetPosition().y;
+				std::cout << "(" << bx << ", " << by << ")" << std::endl;
+				std::cout << "[" << s_objectOriginalPosition.x << ", " << s_objectOriginalPosition.y << "]" << std::endl;
 				std::cout << "mouse position : (" << pw.x << ", " << pw.y << ")" << std::endl;
 				std::cout << "object position : (" << bx << ", " << by << ")" << std::endl;
 				if (pw.x > bx + 1.f && pw.x<bx + 5.f && pw.y>by - 1.f && pw.y < by + 1.f)
@@ -160,7 +175,6 @@ static void MouseButtonCallback(GLFWwindow* window, int32 button, int32 action, 
 	{
 		if (action == GLFW_PRESS)
 		{
-			s_clickPointWS = g_camera.ConvertScreenToWorld(ps);
 			s_rightMouseDown = true;
 		}
 
@@ -183,19 +197,26 @@ static void MouseMotionCallback(GLFWwindow*, double xd, double yd)
 	case 1:
 	{
 		b2Transform tf = s_bodySelected->GetTransform();
-		s_bodySelected->SetTransform(b2Vec2(pw.x, tf.p.y), s_bodySelected->GetAngle());
+		s_bodySelected->SetTransform(b2Vec2(s_objectOriginalPosition.x + pw.x - s_clickPointWS.x, tf.p.y), s_bodySelected->GetAngle());
 		break;
 	}
 	case 2:
 	{
 		b2Transform tf = s_bodySelected->GetTransform();
-		s_bodySelected->SetTransform(b2Vec2(tf.p.x, pw.y), s_bodySelected->GetAngle());
+		s_bodySelected->SetTransform(b2Vec2(tf.p.x, s_objectOriginalPosition.y + pw.y - s_clickPointWS.y), s_bodySelected->GetAngle());
 		break;
 	}
 	default:
 		break;
 	}
 
+	if (!s_leftMouseDown)
+	{
+		if (s_operateModel == OperateModel::EDITING)
+		{
+			s_objectOriginalPosition = s_bodySelected->GetPosition();
+		}
+	}
 	if (s_rightMouseDown)
 	{
 		b2Vec2 diff = pw - s_clickPointWS;
@@ -315,16 +336,17 @@ static void UpdateUI()
 				ImGui::EndTabItem();
 			}
 			ImGui::EndTabBar();
-
 		}
 
 		ImGui::End();
 
+		//Circle Button
+		#pragma region
 		ImGui::SetNextWindowPos(ImVec2((float)g_camera.m_width - menuWidth - 100, 10));
 		//ImGui::SetNextWindowPos(ImVec2(10, 200));
 		ImGui::SetNextWindowSize(ImVec2(80, 80));
 
-		ImGui::Begin("Button", NULL,
+		ImGui::Begin("Circle", NULL,
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoCollapse |
@@ -332,7 +354,6 @@ static void UpdateUI()
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoBackground);
-		ImGui::SetNextWindowPosCenter();
 		if (ImGui::ImageButton(
 			g_debugDraw.CreateTextureForImgui("circle.png"),
 			ImVec2(48, 48),
@@ -352,8 +373,51 @@ static void UpdateUI()
 
 				s_scene->AddCircle(g_camera.ConvertScreenToWorld(b2Vec2(g_camera.m_width / 2.0f, g_camera.m_height / 2.0f)), 1, b2_dynamicBody);
 				s_bodySelected = s_scene->GetLastBody();
+				s_objectOriginalPosition = s_bodySelected->GetPosition();
 			}
 		}
+		ImGui::End();
+		#pragma endregion
+
+		//Square Button
+
+		//Confrim Button
+		#pragma region
+		ImGui::SetNextWindowPos(ImVec2((float)g_camera.m_width - menuWidth - 150, 10));
+		//ImGui::SetNextWindowPos(ImVec2(10, 200));
+		ImGui::SetNextWindowSize(ImVec2(80, 80));
+
+		ImGui::Begin("Confirm", NULL,
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoCollapse |
+			//ImGuiWindowFlags_NoInputs |
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoBackground);
+		if (ImGui::ImageButton(
+			g_debugDraw.CreateTextureForImgui("confirm.png"),
+			ImVec2(48, 48),
+			ImVec2(0, 0),
+			ImVec2(1, 1),
+			0,
+			ImVec4(0.761719, 0.761719, 0.871094, 1),
+			ImVec4(0.6, 0.7, 0.9, 1)))
+		{
+			if (s_operateModel == OperateModel::EDITING)
+			{
+				s_settings.m_pause = false;
+				s_operateModel = OperateModel::MOVING;
+				s_operateDirection = 0;
+
+				std::cout << "Confrim" << std::endl;
+
+				s_bodySelected = nullptr;
+				s_objectOriginalPosition = b2Vec2_zero;
+			}
+		}
+		ImGui::End();
+		#pragma endregion
 
 		if (s_operateModel == OperateModel::EDITING)
 		{
@@ -361,9 +425,6 @@ static void UpdateUI()
 			g_debugDraw.DrawArrow(s_bodySelected->GetPosition(), s_bodySelected->GetPosition() + b2Vec2(0, 5), b2Color(0, 1, 0, 1));
 			g_debugDraw.Flush();
 		}
-
-		ImGui::End();
-
 		s_scene->UpdateUI();
 	}
 }
