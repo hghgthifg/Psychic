@@ -21,7 +21,7 @@ struct Camera
 {
 	Camera()
 	{
-		m_center.Set(0.0f, 20.f);
+		m_center.Set(0.0f, 0.f);
 		m_zoom = 1.0f;
 		m_width = 1280;
 		m_height = 800;

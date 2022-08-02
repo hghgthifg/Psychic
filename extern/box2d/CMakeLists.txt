@@ -1,4 +1,5 @@
 set(BOX2D_SOURCE_FILES
+	src/common/b2_math.cpp
 	src/collision/b2_broad_phase.cpp
 	src/collision/b2_chain_shape.cpp
 	src/collision/b2_circle_shape.cpp
@@ -13,7 +14,6 @@ set(BOX2D_SOURCE_FILES
 	src/collision/b2_time_of_impact.cpp
 	src/common/b2_block_allocator.cpp
 	src/common/b2_draw.cpp
-	src/common/b2_math.cpp
 	src/common/b2_settings.cpp
 	src/common/b2_stack_allocator.cpp
 	src/common/b2_timer.cpp

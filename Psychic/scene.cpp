@@ -12,7 +12,7 @@ Scene::Scene()
 	m_textIncrement = 13;
 	m_mouseJoint = NULL;
 	m_objectId = 1;
-	m_objectSeleted = NULL;
+	m_objectSelected = NULL;
 
 	m_destructionListener.ContactListener = &this->m_contactListener;
 	m_world->SetDestructionListener(&m_destructionListener);
@@ -100,7 +100,7 @@ void Scene::MouseDown(const b2Vec2& p)
 		float frequencyHz = 5.0f;
 		float dampingRatio = 0.7f;
 
-		m_objectSeleted = (ObjectData*)(callback.m_fixture->GetBody()->GetUserData().pointer);
+		m_objectSelected = (ObjectData*)(callback.m_fixture->GetBody()->GetUserData().pointer);
 		//std::cout << m_objectSeleted << std::endl;
 
 		b2Body* body = callback.m_fixture->GetBody();
@@ -193,10 +193,35 @@ void Scene::Step(Settings& settings)
 	}
 }
 
-void Scene::AddEdge(b2Vec2 a, b2Vec2 b)
+void Scene::UpdateUI()
+{
+	if (m_objectSelected != NULL)
+	{
+		ImGui::SetNextWindowPos(ImVec2(0, 20));
+		//ImGui::SetNextWindowSize(ImVec2((float)200, (float)g_camera.m_height - 40));
+		ImGui::Begin("Attribute");
+		ImGui::Text("name : %s", m_objectSelected->name.c_str());
+		ImGui::Text("mass : %f", m_objectSelected->mass);
+		ImGui::Text("density : %f", m_objectSelected->density);
+		ImGui::Text("position : (%f,%f)", m_objectSelected->x, m_objectSelected->y);
+		ImGui::End();
+	}
+}
+
+b2Body* Scene::GetLastBody()
+{
+	return m_world->GetBodyList();
+}
+
+void Scene::SelectBody(b2Body* body)
+{
+	m_objectSelected = (ObjectData*)body->GetUserData().pointer;
+}
+
+void Scene::AddEdge(b2Vec2 from, b2Vec2 to)
 {
 	b2EdgeShape shape;
-	shape.SetTwoSided(a, b);
+	shape.SetTwoSided(from, to);
 
 	ObjectData* od = new ObjectData();
 	m_objectDataList.push_back(od);
@@ -214,8 +239,8 @@ void Scene::AddEdge(b2Vec2 a, b2Vec2 b)
 	od->mass = 0;
 	od->density = 0;
 	od->name = "Object" + std::to_string(m_objectId);
-	od->x = (a.x + b.x) / 2.0f;
-	od->y = (a.y + b.y) / 2.0f;
+	od->x = (from.x + to.x) / 2.0f;
+	od->y = (from.y + to.y) / 2.0f;
 	m_objectId++;
 }
 
@@ -248,22 +273,31 @@ void Scene::AddCircle(b2Vec2 pos, float radius, b2BodyType type)
 	m_objectId++;
 }
 
-void Scene::UpdateUI()
+void Scene::AddRectangle(b2Vec2 pos, b2Vec2 size, b2BodyType type)
 {
-	if (m_objectSeleted != NULL)
-	{
-		ImGui::SetNextWindowPos(ImVec2(0, 20));
-		//ImGui::SetNextWindowSize(ImVec2((float)200, (float)g_camera.m_height - 40));
-		ImGui::Begin("Attribute");
-		ImGui::Text("name : %s", m_objectSeleted->name.c_str());
-		ImGui::Text("mass : %f", m_objectSeleted->mass);
-		ImGui::Text("density : %f", m_objectSeleted->density);
-		ImGui::Text("position : (%f,%f)", m_objectSeleted->x, m_objectSeleted->y);
-		ImGui::End();
-	}
-}
+	b2PolygonShape shape;
+	shape.SetAsBox(size.x, size.y);
 
-b2Body* Scene::GetLastBody()
-{
-	return m_world->GetBodyList();
+	ObjectData* od = new ObjectData();
+	m_objectDataList.push_back(od);
+
+	b2FixtureDef fd;
+	fd.shape = &shape;
+	fd.density = 1.0f;
+
+	b2BodyDef bd;
+	bd.type = type;
+	bd.position.Set(pos);
+	bd.userData.pointer = reinterpret_cast<uintptr_t>(od);
+
+	b2Body* body = m_world->CreateBody(&bd);
+	body->CreateFixture(&fd);
+
+	od->id = m_objectId;
+	od->mass = body->GetMass();
+	od->density = fd.density;
+	od->name = "Object" + std::to_string(m_objectId);
+	od->x = pos.x;
+	od->y = pos.y;
+	m_objectId++;
 }

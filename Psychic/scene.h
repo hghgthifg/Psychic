@@ -109,11 +109,13 @@ public:
 	virtual void MouseUp(const b2Vec2& p);
 	virtual void MouseMove(const b2Vec2& p);
 	void ShiftOrigin(const b2Vec2& newOrigin);
+	void SelectBody(b2Body* body);
 
 	b2Body* GetLastBody();
 
 	void AddCircle(b2Vec2 pos, float radius, b2BodyType type);
-	void AddEdge(b2Vec2 a, b2Vec2 b);
+	void AddEdge(b2Vec2 from, b2Vec2 to);
+	void AddRectangle(b2Vec2 pos, b2Vec2 size, b2BodyType type);
 
 protected:
 	ContactListener m_contactListener;
@@ -129,7 +131,7 @@ protected:
 	int32 m_objectId;
 	int32 m_textLine;
 	int32 m_textIncrement;
-	ObjectData* m_objectSeleted;
+	ObjectData* m_objectSelected;
 };
 
 #endif

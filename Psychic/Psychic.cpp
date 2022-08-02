@@ -341,16 +341,14 @@ static void UpdateUI()
 		ImGui::End();
 
 		//Circle Button
-		#pragma region
+#pragma region
 		ImGui::SetNextWindowPos(ImVec2((float)g_camera.m_width - menuWidth - 100, 10));
-		//ImGui::SetNextWindowPos(ImVec2(10, 200));
 		ImGui::SetNextWindowSize(ImVec2(80, 80));
 
 		ImGui::Begin("Circle", NULL,
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoCollapse |
-			//ImGuiWindowFlags_NoInputs |
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoBackground);
@@ -369,29 +367,58 @@ static void UpdateUI()
 				s_operateModel = OperateModel::EDITING;
 				s_operateDirection = 0;
 
-				std::cout << "Circle" << std::endl;
-
 				s_scene->AddCircle(g_camera.ConvertScreenToWorld(b2Vec2(g_camera.m_width / 2.0f, g_camera.m_height / 2.0f)), 1, b2_dynamicBody);
 				s_bodySelected = s_scene->GetLastBody();
 				s_objectOriginalPosition = s_bodySelected->GetPosition();
+				s_scene->SelectBody(s_bodySelected);
 			}
 		}
 		ImGui::End();
-		#pragma endregion
+#pragma endregion
 
 		//Square Button
+		ImGui::SetNextWindowPos(ImVec2((float)g_camera.m_width - menuWidth - 150, 10));
+		ImGui::SetNextWindowSize(ImVec2(80, 80));
+
+		ImGui::Begin("Square", NULL,
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoBackground);
+		if (ImGui::ImageButton(
+			g_debugDraw.CreateTextureForImgui("square.png"),
+			ImVec2(48, 48),
+			ImVec2(0, 0),
+			ImVec2(1, 1),
+			0,
+			ImVec4(0.761719, 0.761719, 0.871094, 1),
+			ImVec4(0.6, 0.7, 0.9, 1)))
+		{
+			if (s_operateModel != OperateModel::EDITING)
+			{
+				s_settings.m_pause = true;
+				s_operateModel = OperateModel::EDITING;
+				s_operateDirection = 0;
+
+				s_scene->AddRectangle(g_camera.ConvertScreenToWorld(b2Vec2(g_camera.m_width / 2.0f, g_camera.m_height / 2.0f)), b2Vec2(1, 1), b2_dynamicBody);
+				s_bodySelected = s_scene->GetLastBody();
+				s_objectOriginalPosition = s_bodySelected->GetPosition();
+				s_scene->SelectBody(s_bodySelected);
+			}
+		}
+		ImGui::End();
 
 		//Confrim Button
-		#pragma region
-		ImGui::SetNextWindowPos(ImVec2((float)g_camera.m_width - menuWidth - 150, 10));
-		//ImGui::SetNextWindowPos(ImVec2(10, 200));
+#pragma region
+		ImGui::SetNextWindowPos(ImVec2((float)g_camera.m_width - menuWidth - 200, 10));
 		ImGui::SetNextWindowSize(ImVec2(80, 80));
 
 		ImGui::Begin("Confirm", NULL,
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoCollapse |
-			//ImGuiWindowFlags_NoInputs |
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoBackground);
@@ -417,12 +444,19 @@ static void UpdateUI()
 			}
 		}
 		ImGui::End();
-		#pragma endregion
+#pragma endregion
 
 		if (s_operateModel == OperateModel::EDITING)
 		{
-			g_debugDraw.DrawArrow(s_bodySelected->GetPosition(), s_bodySelected->GetPosition() + b2Vec2(5, 0), b2Color(1, 0, 0, 1));
-			g_debugDraw.DrawArrow(s_bodySelected->GetPosition(), s_bodySelected->GetPosition() + b2Vec2(0, 5), b2Color(0, 1, 0, 1));
+			g_debugDraw.DrawArrow(
+				s_bodySelected->GetPosition() + b2Vec2(1, 0),
+				s_bodySelected->GetPosition() + b2Vec2(5, 0),
+				b2Color(1, 0, 0, 1));
+			g_debugDraw.DrawArrow(
+				s_bodySelected->GetPosition() + b2Vec2(0, 1),
+				s_bodySelected->GetPosition() + b2Vec2(0, 5),
+				b2Color(0, 1, 0, 1));
+			std::cout << s_bodySelected->GetPosition().x <<" " << s_bodySelected->GetPosition().y << std::endl;
 			g_debugDraw.Flush();
 		}
 		s_scene->UpdateUI();
